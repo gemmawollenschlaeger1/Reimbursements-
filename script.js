@@ -125,5 +125,5 @@ generatePdfBtn.addEventListener("click", async () => {
     // Receipts (page 2+)
     await addReceiptImages(doc);
 
-    doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
+    doc.save(`${submissionDate}_Reimbursement_${firstName}_${lastName}.pdf`);
 });
