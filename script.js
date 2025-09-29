@@ -37,7 +37,6 @@ async function addReceiptImages(doc) {
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
         img.style.maxWidth = '600px';
-        img.style.marginBottom = '10px';
         previewDiv.appendChild(img);
 
         await new Promise(resolve => { img.onload = resolve; });
@@ -45,7 +44,7 @@ async function addReceiptImages(doc) {
         const canvas = await html2canvas(img, { scale: 2 });
         const imgData = canvas.toDataURL('image/jpeg');
 
-        if (i > 0) doc.addPage(); // new page for multiple receipts
+        if (i > 0) doc.addPage(); // add new page for subsequent receipts
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -57,5 +56,56 @@ async function addReceiptImages(doc) {
         doc.addImage(imgData, 'JPEG', margin, margin, pdfWidth, pdfHeight);
     }
 
-    // clean up object URLs
-    Array.from(previewDiv.querySelectorAll('img')).forEach(img => URL.
+    // Clean up object URLs
+    Array.from(previewDiv.querySelectorAll('img')).forEach(img => URL.revokeObjectURL(img.src));
+}
+
+// Generate PDF
+generatePdfBtn.addEventListener("click", async () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const firstName = document.getElementById("firstName").value;
+    const lastName = document.getElementById("lastName").value;
+    const submissionDate = document.getElementById("submissionDate").value;
+
+    doc.setFontSize(16);
+    doc.text("Reimbursement Request", 105, 20, null, null, "center");
+    doc.setFontSize(12);
+    doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
+    doc.text(`Submission Date: ${submissionDate}`, 20, 50);
+
+    // Expenses Table
+    let startY = 70;
+    doc.text("Date", 20, startY);
+    doc.text("Description", 50, startY);
+    doc.text("Amount ($)", 120, startY);
+    doc.text("Miles", 150, startY);
+    doc.text("Mileage $", 180, startY);
+
+    let total = 0;
+    const rows = document.querySelectorAll(".expenseRow");
+    rows.forEach((row, i) => {
+        const expenseDate = row.querySelector(".expenseDate").value;
+        const desc = row.querySelector(".expenseDesc").value;
+        const amount = parseFloat(row.querySelector(".expenseAmount").value) || 0;
+        const miles = parseFloat(row.querySelector(".expenseMiles").value) || 0;
+        const mileageAmount = miles * 0.7;
+        total += amount + mileageAmount;
+
+        const y = startY + 10 + i * 10;
+        doc.text(expenseDate, 20, y);
+        doc.text(desc, 50, y);
+        doc.text(amount.toFixed(2), 120, y);
+        doc.text(miles ? miles.toFixed(1) : "-", 150, y);
+        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", 180, y);
+    });
+
+    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
+
+    // Add all receipts
+    await addReceiptImages(doc);
+
+    doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
+});
+
