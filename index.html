@@ -1,34 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Reimbursement Form</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <h1>Reimbursement Request Form</h1>
+// Add receipt images to PDF
+async function addReceipts(doc) {
+    const files = receiptInput.files;
+    if (!files.length) return;
 
-    <form id="reimbursementForm">
-        <h2>Employee Info</h2>
-        <label>First Name: <input type="text" id="firstName" required></label><br>
-        <label>Last Name: <input type="text" id="lastName" required></label><br>
-        <label>Date: <input type="date" id="submissionDate" required></label><br>
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
 
-        <h2>Expenses</h2>
-        <div id="expensesContainer"></div>
-        <button type="button" id="addExpenseBtn">Add Expense</button><br><br>
+        // Only proceed if it is an image
+        if (!file.type.startsWith("image/")) continue;
 
-        <h2>Receipts</h2>
-        <label>Upload Receipt Images: 
-            <input type="file" id="receiptFiles" accept="image/*" multiple>
-        </label><br><br>
+        const imgData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                resolve(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
 
-        <button type="button" id="generatePdfBtn">Generate PDF</button>
-    </form>
+        // Calculate image dimensions
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const maxWidth = pageWidth - margin * 2;
 
-    <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+        const imgProps = doc.getImageProperties(imgData);
+        const imgWidth = maxWidth;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        // Add new page if needed
+        if (imgHeight > pageHeight - margin * 2) {
+            doc.addPage();
+        }
+
+        doc.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+        doc.addPage(); // separate receipts on new page
+    }
+}
