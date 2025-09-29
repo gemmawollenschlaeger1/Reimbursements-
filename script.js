@@ -22,44 +22,6 @@ function addExpenseRow() {
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
-// Add receipt images using html2canvas
-async function addReceiptImages(doc) {
-    const files = receiptInput.files;
-    if (!files.length) return;
-
-    const previewDiv = document.getElementById("receiptPreview");
-    previewDiv.innerHTML = ''; // clear old content
-
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith("image/")) continue;
-
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        img.style.maxWidth = '600px';
-        previewDiv.appendChild(img);
-
-        await new Promise(resolve => { img.onload = resolve; });
-
-        const canvas = await html2canvas(img, { scale: 2 });
-        const imgData = canvas.toDataURL('image/jpeg');
-
-        if (i > 0) doc.addPage(); // add new page for subsequent receipts
-
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 20;
-        const imgProps = doc.getImageProperties(imgData);
-        const pdfWidth = pageWidth - margin * 2;
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-        doc.addImage(imgData, 'JPEG', margin, margin, pdfWidth, pdfHeight);
-    }
-
-    // Clean up object URLs
-    Array.from(previewDiv.querySelectorAll('img')).forEach(img => URL.revokeObjectURL(img.src));
-}
-
 // Generate PDF
 generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
@@ -69,6 +31,7 @@ generatePdfBtn.addEventListener("click", async () => {
     const lastName = document.getElementById("lastName").value;
     const submissionDate = document.getElementById("submissionDate").value;
 
+    // --- Main form content ---
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
     doc.setFontSize(12);
@@ -103,9 +66,35 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // Add all receipts
-    await addReceiptImages(doc);
+    // --- Add all receipts starting on a new page ---
+    const files = receiptInput.files;
+    if (files.length) {
+        doc.addPage(); // start receipts on a fresh page
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith("image/")) continue;
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            await new Promise(resolve => { img.onload = resolve; });
+
+            const canvas = await html2canvas(img, { scale: 2 });
+            const imgData = canvas.toDataURL('image/jpeg');
+
+            if (i > 0) doc.addPage(); // new page for subsequent receipts
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const imgProps = doc.getImageProperties(imgData);
+            const pdfWidth = pageWidth - margin * 2;
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            doc.addImage(imgData, 'JPEG', margin, margin, pdfWidth, pdfHeight);
+
+            URL.revokeObjectURL(img.src);
+        }
+    }
 
     doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
 });
-
