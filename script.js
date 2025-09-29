@@ -25,6 +25,43 @@ function addExpenseRow() {
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
+// Function to add receipt images to PDF
+async function addReceipts(doc) {
+    const files = receiptInput.files;
+    if (!files.length) return;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        if (!file.type.startsWith("image/")) continue;
+
+        const imgData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                resolve(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Calculate dimensions
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 20;
+        const maxWidth = pageWidth - margin * 2;
+
+        const imgProps = doc.getImageProperties(imgData);
+        const imgWidth = maxWidth;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        if (imgHeight > pageHeight - margin * 2) {
+            doc.addPage();
+        }
+
+        doc.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+        doc.addPage(); // separate receipts on new page
+    }
+}
+
 // PDF Generation
 generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
@@ -70,17 +107,9 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // Add receipt images
-    const files = receiptInput.files;
-    let currentY = startY + 40 + rows.length * 10;
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
+    // Add receipts
+    await addReceipts(doc);
 
-        await new Promise((resolve) => {
-            reader.onload = function(event) {
-                const imgData = event.target.result;
-                const imgProps = doc.getImageProperties(imgData);
-                const pdfWidth = doc.internal.pageSize.getWidth() - 40;
-                const pdfHeight = (imgP
-
+    // Save PDF
+    doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
+});
