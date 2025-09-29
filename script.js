@@ -22,6 +22,40 @@ function addExpenseRow() {
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
+// Function to add receipts using FileReader (supports multiple files)
+async function addReceiptImages(doc) {
+    const files = receiptInput.files;
+    if (!files.length) return;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith("image/")) continue;
+
+        // Read the file as a base64 Data URL
+        const imgData = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = e => reject(e);
+            reader.readAsDataURL(file);
+        });
+
+        // Add a new page for each receipt
+        doc.addPage();
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+
+        const img = new Image();
+        img.src = imgData;
+        await new Promise(resolve => { img.onload = resolve; });
+
+        const pdfWidth = pageWidth - margin * 2;
+        const pdfHeight = (img.height * pdfWidth) / img.width;
+
+        doc.addImage(imgData, 'JPEG', margin, margin, pdfWidth, pdfHeight);
+    }
+}
+
 // Generate PDF
 generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
@@ -31,7 +65,7 @@ generatePdfBtn.addEventListener("click", async () => {
     const lastName = document.getElementById("lastName").value;
     const submissionDate = document.getElementById("submissionDate").value;
 
-    // --- Main form content ---
+    // --- Page 1: Main form content ---
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
     doc.setFontSize(12);
@@ -66,38 +100,8 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // --- Add all receipts starting on page 2 ---
-    const files = receiptInput.files;
-    if (files.length) {
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (!file.type.startsWith("image/")) continue;
-
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
-            await new Promise(resolve => { img.onload = resolve; });
-
-            const canvas = await html2canvas(img, { scale: 2 });
-            const imgData = canvas.toDataURL('image/jpeg');
-
-            // Ensure first receipt starts on a new page
-            if (i === 0) {
-                doc.addPage(); // first receipt on page 2
-            } else {
-                doc.addPage(); // subsequent receipts each get a new page
-            }
-
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const margin = 20;
-            const imgProps = doc.getImageProperties(imgData);
-            const pdfWidth = pageWidth - margin * 2;
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-            doc.addImage(imgData, 'JPEG', margin, margin, pdfWidth, pdfHeight);
-
-            URL.revokeObjectURL(img.src);
-        }
-    }
+    // --- Add all receipts starting from page 2 ---
+    await addReceiptImages(doc);
 
     doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
 });
