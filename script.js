@@ -58,44 +58,46 @@ generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Get form values
     const firstName = document.getElementById("firstName").value || "NoName";
     const lastName = document.getElementById("lastName").value || "NoName";
     let submissionDate = document.getElementById("submissionDate").value;
 
-    // If submission date is empty, fallback to today
     if (!submissionDate) {
         const today = new Date();
-        submissionDate = today.toISOString().split('T')[0]; // YYYY-MM-DD
+        submissionDate = today.toISOString().split('T')[0];
     }
 
-    // Safe filename
     const safeDate = submissionDate.replace(/[/\\?%*:|"<>]/g, "-");
 
-    // Optional: add company logo
-    // doc.addImage("logo.png", "PNG", 150, 10, 40, 20); // replace with your logo
-
-    // --- Page 1: Form + Expenses Table ---
+    // --- Page 1: Form + Table ---
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
-
     doc.setFontSize(12);
     doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
     doc.text(`Submission Date: ${submissionDate}`, 20, 50);
 
+    // Table setup
+    const startX = 15;
     const startY = 70;
-    const colX = [20, 50, 120, 150, 180];
+    const colWidths = [30, 70, 25, 25, 25]; // widths of columns
+    const rowHeight = 10;
     const headers = ["Date", "Description", "Amount ($)", "Miles", "Mileage $"];
 
-    // Draw headers
+    // Draw header row
+    doc.setFillColor(200, 200, 200); // light gray
     doc.setFont(undefined, 'bold');
-    headers.forEach((text, i) => doc.text(text, colX[i], startY));
+    doc.rect(startX, startY, colWidths.reduce((a,b)=>a+b,0), rowHeight, 'F'); // header background
+    let x = startX;
+    headers.forEach((header, i) => {
+        doc.text(header, x + 2, startY + 7);
+        x += colWidths[i];
+    });
     doc.setFont(undefined, 'normal');
 
-    // Table
-    const rows = document.querySelectorAll(".expenseRow");
-    const rowHeight = 10;
+    // Draw rows
+    let y = startY + rowHeight;
     let total = 0;
+    const rows = document.querySelectorAll(".expenseRow");
 
     rows.forEach((row, i) => {
         const expenseDate = row.querySelector(".expenseDate").value;
@@ -105,36 +107,39 @@ generatePdfBtn.addEventListener("click", async () => {
         const mileageAmount = miles * 0.7;
         total += amount + mileageAmount;
 
-        const y = startY + rowHeight + i * rowHeight;
+        // Alternating row color
+        if (i % 2 === 0) doc.setFillColor(245,245,245);
+        else doc.setFillColor(255,255,255);
+        doc.rect(startX, y, colWidths.reduce((a,b)=>a+b,0), rowHeight, 'F');
 
-        // Alternating row background
-        if (i % 2 === 0) {
-            doc.setFillColor(240, 240, 240);
-            doc.rect(15, y - 7, 180, rowHeight, 'F');
-        }
+        let cellX = startX;
+        doc.text(expenseDate, cellX + 2, y + 7); cellX += colWidths[0];
+        doc.text(desc, cellX + 2, y + 7); cellX += colWidths[1];
+        doc.text(amount.toFixed(2), cellX + colWidths[2]-2, y + 7, {align: "right"}); cellX += colWidths[2];
+        doc.text(miles ? miles.toFixed(1) : "-", cellX + colWidths[3]-2, y + 7, {align: "right"}); cellX += colWidths[3];
+        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", cellX + colWidths[4]-2, y + 7, {align: "right"});
 
-        doc.text(expenseDate, colX[0], y);
-        doc.text(desc, colX[1], y);
-        doc.text(amount.toFixed(2), colX[2], y);
-        doc.text(miles ? miles.toFixed(1) : "-", colX[3], y);
-        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", colX[4], y);
+        y += rowHeight;
     });
 
-    // Draw table borders
-    const tableTop = startY - 5;
-    const tableBottom = startY + rowHeight + rows.length * rowHeight - 2;
-    doc.line(15, tableTop, 195, tableTop); // top
-    doc.line(15, tableBottom, 195, tableBottom); // bottom
-    [20, 50, 120, 150, 180, 195].forEach(x => doc.line(x, tableTop, x, tableBottom)); // vertical lines
+    // Draw vertical lines
+    let lineX = startX;
+    [0,1,2,3,4,5].forEach(i => {
+        doc.line(lineX, startY, lineX, y); 
+        if (i < colWidths.length) lineX += colWidths[i];
+    });
+    // Draw horizontal lines
+    for(let rowY=startY; rowY<=y; rowY+=rowHeight) doc.line(startX, rowY, startX + colWidths.reduce((a,b)=>a+b,0), rowY);
 
-    // Total
-    doc.setFont(undefined, 'bold');
-    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, tableBottom + 15);
-    doc.setFont(undefined, 'normal');
+    // Total row
+    doc.setFont(undefined,'bold');
+    doc.setFillColor(220,220,220);
+    doc.rect(startX, y, colWidths.reduce((a,b)=>a+b,0), rowHeight, 'F');
+    doc.text(`Total: $${total.toFixed(2)}`, startX + 2, y + 7);
+    doc.setFont(undefined,'normal');
 
     // Receipts (page 2+)
     await addReceiptImages(doc);
 
-    // Save PDF with submission date in filename
     doc.save(`${safeDate}_Reimbursement_${firstName}_${lastName}.pdf`);
 });
