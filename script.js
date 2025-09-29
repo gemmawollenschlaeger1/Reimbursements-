@@ -38,9 +38,7 @@ async function addReceiptImages(doc) {
             reader.readAsDataURL(file);
         });
 
-        // Add a new page for each receipt
         doc.addPage();
-
         const pageWidth = doc.internal.pageSize.getWidth();
         const margin = 20;
 
@@ -64,22 +62,31 @@ generatePdfBtn.addEventListener("click", async () => {
     const lastName = document.getElementById("lastName").value;
     const submissionDate = document.getElementById("submissionDate").value;
 
-    // Page 1: Form + Expenses
+    // Optional: add company logo
+    // doc.addImage("logo.png", "PNG", 150, 10, 40, 20); // replace with your logo
+
+    // --- Page 1: Form + Expenses Table ---
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
+
     doc.setFontSize(12);
     doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
     doc.text(`Submission Date: ${submissionDate}`, 20, 50);
 
-    let startY = 70;
-    doc.text("Date", 20, startY);
-    doc.text("Description", 50, startY);
-    doc.text("Amount ($)", 120, startY);
-    doc.text("Miles", 150, startY);
-    doc.text("Mileage $", 180, startY);
+    const startY = 70;
+    const colX = [20, 50, 120, 150, 180];
+    const headers = ["Date", "Description", "Amount ($)", "Miles", "Mileage $"];
 
-    let total = 0;
+    // Draw headers
+    doc.setFont(undefined, 'bold');
+    headers.forEach((text, i) => doc.text(text, colX[i], startY));
+    doc.setFont(undefined, 'normal');
+
+    // Draw table grid
     const rows = document.querySelectorAll(".expenseRow");
+    const rowHeight = 10;
+    let total = 0;
+
     rows.forEach((row, i) => {
         const expenseDate = row.querySelector(".expenseDate").value;
         const desc = row.querySelector(".expenseDesc").value;
@@ -88,15 +95,32 @@ generatePdfBtn.addEventListener("click", async () => {
         const mileageAmount = miles * 0.7;
         total += amount + mileageAmount;
 
-        const y = startY + 10 + i * 10;
-        doc.text(expenseDate, 20, y);
-        doc.text(desc, 50, y);
-        doc.text(amount.toFixed(2), 120, y);
-        doc.text(miles ? miles.toFixed(1) : "-", 150, y);
-        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", 180, y);
+        const y = startY + rowHeight + i * rowHeight;
+
+        // Alternating row background
+        if (i % 2 === 0) {
+            doc.setFillColor(240, 240, 240);
+            doc.rect(15, y - 7, 180, rowHeight, 'F');
+        }
+
+        doc.text(expenseDate, colX[0], y);
+        doc.text(desc, colX[1], y);
+        doc.text(amount.toFixed(2), colX[2], y);
+        doc.text(miles ? miles.toFixed(1) : "-", colX[3], y);
+        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", colX[4], y);
     });
 
-    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
+    // Draw table borders
+    const tableTop = startY - 5;
+    const tableBottom = startY + rowHeight + rows.length * rowHeight - 2;
+    doc.line(15, tableTop, 195, tableTop); // top
+    doc.line(15, tableBottom, 195, tableBottom); // bottom
+    [20, 50, 120, 150, 180, 195].forEach(x => doc.line(x, tableTop, x, tableBottom)); // vertical lines
+
+    // Total
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, tableBottom + 15);
+    doc.setFont(undefined, 'normal');
 
     // Receipts (page 2+)
     await addReceiptImages(doc);
