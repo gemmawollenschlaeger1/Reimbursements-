@@ -17,33 +17,26 @@ function addExpenseRow() {
         <hr>
     `;
     expensesContainer.appendChild(div);
-
-    div.querySelector(".removeExpenseBtn").addEventListener("click", () => {
-        div.remove();
-    });
+    div.querySelector(".removeExpenseBtn").addEventListener("click", () => div.remove());
 }
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
-// Function to add receipt images to PDF
-async function addReceipts(doc) {
+// Helper: add images to PDF
+async function addReceiptImages(doc) {
     const files = receiptInput.files;
     if (!files.length) return;
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-
         if (!file.type.startsWith("image/")) continue;
 
         const imgData = await new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = function(e) {
-                resolve(e.target.result);
-            };
+            reader.onload = e => resolve(e.target.result);
             reader.readAsDataURL(file);
         });
 
-        // Calculate dimensions
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 20;
@@ -53,12 +46,9 @@ async function addReceipts(doc) {
         const imgWidth = maxWidth;
         const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-        if (imgHeight > pageHeight - margin * 2) {
-            doc.addPage();
-        }
+        if (i > 0) doc.addPage();
 
-        doc.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-        doc.addPage(); // separate receipts on new page
+        doc.addImage(imgData, imgProps.fileType || 'JPEG', margin, margin, imgWidth, imgHeight);
     }
 }
 
@@ -67,7 +57,6 @@ generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Employee info
     const firstName = document.getElementById("firstName").value;
     const lastName = document.getElementById("lastName").value;
     const submissionDate = document.getElementById("submissionDate").value;
@@ -78,7 +67,7 @@ generatePdfBtn.addEventListener("click", async () => {
     doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
     doc.text(`Submission Date: ${submissionDate}`, 20, 50);
 
-    // Table header
+    // Expenses Table
     let startY = 70;
     doc.text("Date", 20, startY);
     doc.text("Description", 50, startY);
@@ -94,7 +83,6 @@ generatePdfBtn.addEventListener("click", async () => {
         const amount = parseFloat(row.querySelector(".expenseAmount").value) || 0;
         const miles = parseFloat(row.querySelector(".expenseMiles").value) || 0;
         const mileageAmount = miles * 0.7;
-
         total += amount + mileageAmount;
 
         const y = startY + 10 + i * 10;
@@ -107,9 +95,8 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // Add receipts
-    await addReceipts(doc);
+    // Add receipt images
+    await addReceiptImages(doc);
 
-    // Save PDF
     doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
 });
