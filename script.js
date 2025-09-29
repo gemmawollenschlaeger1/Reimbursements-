@@ -22,7 +22,7 @@ function addExpenseRow() {
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
-// Function to add receipts using FileReader (supports multiple files)
+// Add receipts using FileReader
 async function addReceiptImages(doc) {
     const files = receiptInput.files;
     if (!files.length) return;
@@ -31,7 +31,6 @@ async function addReceiptImages(doc) {
         const file = files[i];
         if (!file.type.startsWith("image/")) continue;
 
-        // Read the file as a base64 Data URL
         const imgData = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = e => resolve(e.target.result);
@@ -65,14 +64,13 @@ generatePdfBtn.addEventListener("click", async () => {
     const lastName = document.getElementById("lastName").value;
     const submissionDate = document.getElementById("submissionDate").value;
 
-    // --- Page 1: Main form content ---
+    // Page 1: Form + Expenses
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
     doc.setFontSize(12);
     doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
     doc.text(`Submission Date: ${submissionDate}`, 20, 50);
 
-    // Expenses Table
     let startY = 70;
     doc.text("Date", 20, startY);
     doc.text("Description", 50, startY);
@@ -100,7 +98,7 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // --- Add all receipts starting from page 2 ---
+    // Receipts (page 2+)
     await addReceiptImages(doc);
 
     doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
