@@ -22,7 +22,7 @@ function addExpenseRow() {
 
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
-// Add receipts
+// Add receipts using FileReader
 async function addReceiptImages(doc) {
     const files = receiptInput.files;
     if (!files.length) return;
@@ -58,18 +58,14 @@ generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    const firstName = document.getElementById("firstName").value || "NoName";
-    const lastName = document.getElementById("lastName").value || "NoName";
-    let submissionDate = document.getElementById("submissionDate").value;
+    const firstName = document.getElementById("firstName").value;
+    const lastName = document.getElementById("lastName").value;
+    const submissionDate = document.getElementById("submissionDate").value;
 
-    if (!submissionDate) {
-        const today = new Date();
-        submissionDate = today.toISOString().split('T')[0];
-    }
+    // Optional: add company logo
+    // doc.addImage("logo.png", "PNG", 150, 10, 40, 20); // replace with your logo
 
-    const safeDate = submissionDate.replace(/[/\\?%*:|"<>]/g, "-");
-
-    // Header
+    // --- Page 1: Form + Expenses Table ---
     doc.setFontSize(16);
     doc.text("Reimbursement Request", 105, 20, null, null, "center");
 
@@ -77,11 +73,16 @@ generatePdfBtn.addEventListener("click", async () => {
     doc.text(`Employee: ${firstName} ${lastName}`, 20, 40);
     doc.text(`Submission Date: ${submissionDate}`, 20, 50);
 
-    // Expenses list
-    let y = 70;
+    // Table headers
+    const startY = 70;
+    const colX = [20, 50, 120, 150, 180];
+    const headers = ["Date", "Description", "Amount ($)", "Miles", "Mileage $"];
+    doc.setFont(undefined, 'bold');
+    headers.forEach((text, i) => doc.text(text, colX[i], startY));
+    doc.setFont(undefined, 'normal');
+
     let total = 0;
     const rows = document.querySelectorAll(".expenseRow");
-
     rows.forEach((row, i) => {
         const expenseDate = row.querySelector(".expenseDate").value;
         const desc = row.querySelector(".expenseDesc").value;
@@ -90,24 +91,28 @@ generatePdfBtn.addEventListener("click", async () => {
         const mileageAmount = miles * 0.7;
         total += amount + mileageAmount;
 
-        doc.text(`${i + 1}. Date: ${expenseDate}`, 20, y);
-        y += 7;
-        doc.text(`   Description: ${desc}`, 20, y);
-        y += 7;
-        doc.text(`   Amount: $${amount.toFixed(2)}`, 20, y);
-        if (miles) {
-            y += 7;
-            doc.text(`   Mileage: ${miles} miles ($${mileageAmount.toFixed(2)})`, 20, y);
-        }
-        y += 10; // spacing between expenses
+        const y = startY + 10 + i * 10;
+        doc.text(expenseDate, colX[0], y);
+        doc.text(desc, colX[1], y);
+        doc.text(amount.toFixed(2), colX[2], y);
+        doc.text(miles ? miles.toFixed(1) : "-", colX[3], y);
+        doc.text(mileageAmount ? mileageAmount.toFixed(2) : "-", colX[4], y);
     });
 
-    doc.setFont(undefined,'bold');
-    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, y);
-    doc.setFont(undefined,'normal');
+    // Draw table lines
+    const tableEndY = startY + 10 + rows.length * 10;
+    doc.line(15, startY - 5, 195, startY - 5); // top
+    doc.line(15, tableEndY + 2, 195, tableEndY + 2); // bottom
+    // Vertical lines for columns
+    [20, 50, 120, 150, 180, 195].forEach(x => doc.line(x, startY - 5, x, tableEndY + 2));
 
-    // Receipts
+    // Total
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, tableEndY + 15);
+    doc.setFont(undefined, 'normal');
+
+    // Receipts (page 2+)
     await addReceiptImages(doc);
 
-    doc.save(`${safeDate}_Reimbursement_${firstName}_${lastName}.pdf`);
+    doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
 });
