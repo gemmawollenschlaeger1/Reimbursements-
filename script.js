@@ -66,11 +66,9 @@ generatePdfBtn.addEventListener("click", async () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // --- Add all receipts starting on a new page ---
+    // --- Add all receipts starting on page 2 ---
     const files = receiptInput.files;
     if (files.length) {
-        doc.addPage(); // start receipts on a fresh page
-
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file.type.startsWith("image/")) continue;
@@ -82,7 +80,12 @@ generatePdfBtn.addEventListener("click", async () => {
             const canvas = await html2canvas(img, { scale: 2 });
             const imgData = canvas.toDataURL('image/jpeg');
 
-            if (i > 0) doc.addPage(); // new page for subsequent receipts
+            // Ensure first receipt starts on a new page
+            if (i === 0) {
+                doc.addPage(); // first receipt on page 2
+            } else {
+                doc.addPage(); // subsequent receipts each get a new page
+            }
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const margin = 20;
