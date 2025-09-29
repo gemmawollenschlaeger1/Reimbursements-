@@ -58,9 +58,19 @@ generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    const firstName = document.getElementById("firstName").value;
-    const lastName = document.getElementById("lastName").value;
-    const submissionDate = document.getElementById("submissionDate").value;
+    // Get form values
+    const firstName = document.getElementById("firstName").value || "NoName";
+    const lastName = document.getElementById("lastName").value || "NoName";
+    let submissionDate = document.getElementById("submissionDate").value;
+
+    // If submission date is empty, fallback to today
+    if (!submissionDate) {
+        const today = new Date();
+        submissionDate = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    }
+
+    // Safe filename
+    const safeDate = submissionDate.replace(/[/\\?%*:|"<>]/g, "-");
 
     // Optional: add company logo
     // doc.addImage("logo.png", "PNG", 150, 10, 40, 20); // replace with your logo
@@ -82,7 +92,7 @@ generatePdfBtn.addEventListener("click", async () => {
     headers.forEach((text, i) => doc.text(text, colX[i], startY));
     doc.setFont(undefined, 'normal');
 
-    // Draw table grid
+    // Table
     const rows = document.querySelectorAll(".expenseRow");
     const rowHeight = 10;
     let total = 0;
@@ -125,5 +135,6 @@ generatePdfBtn.addEventListener("click", async () => {
     // Receipts (page 2+)
     await addReceiptImages(doc);
 
-    doc.save(`${submissionDate}_Reimbursement_${firstName}_${lastName}.pdf`);
+    // Save PDF with submission date in filename
+    doc.save(`${safeDate}_Reimbursement_${firstName}_${lastName}.pdf`);
 });
