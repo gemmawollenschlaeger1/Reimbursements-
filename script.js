@@ -1,9 +1,10 @@
-// Initialize expenses container
+// Elements
 const expensesContainer = document.getElementById("expensesContainer");
 const addExpenseBtn = document.getElementById("addExpenseBtn");
 const generatePdfBtn = document.getElementById("generatePdfBtn");
+const receiptInput = document.getElementById("receiptFiles");
 
-// Function to add a new expense row
+// Add a new expense row
 function addExpenseRow() {
     const div = document.createElement("div");
     div.classList.add("expenseRow");
@@ -25,7 +26,7 @@ function addExpenseRow() {
 addExpenseBtn.addEventListener("click", addExpenseRow);
 
 // PDF Generation
-generatePdfBtn.addEventListener("click", () => {
+generatePdfBtn.addEventListener("click", async () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -69,6 +70,17 @@ generatePdfBtn.addEventListener("click", () => {
 
     doc.text(`Total Reimbursement: $${total.toFixed(2)}`, 20, startY + 20 + rows.length * 10);
 
-    // Save PDF
-    doc.save(`Reimbursement_${firstName}_${lastName}.pdf`);
-});
+    // Add receipt images
+    const files = receiptInput.files;
+    let currentY = startY + 40 + rows.length * 10;
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+
+        await new Promise((resolve) => {
+            reader.onload = function(event) {
+                const imgData = event.target.result;
+                const imgProps = doc.getImageProperties(imgData);
+                const pdfWidth = doc.internal.pageSize.getWidth() - 40;
+                const pdfHeight = (imgP
+
