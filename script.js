@@ -79,7 +79,7 @@ generatePdfBtn.addEventListener("click", async () => {
     // Table setup
     const startX = 15;
     const startY = 70;
-    const colWidths = [25, 60, 25, 25, 25]; // widths of columns
+    const colWidths = [25, 50, 20, 20, 20]; // widths of columns
     const rowHeight = 10;
     const headers = ["Date", "Description", "Amount ($)", "Miles", "Mileage $"];
 
