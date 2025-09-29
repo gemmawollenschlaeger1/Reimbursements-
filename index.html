@@ -6,32 +6,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Reimbursement Request Form</h1>
+    <h1>Reimbursement Request</h1>
+    
+    <label>First Name: <input type="text" id="firstName"></label>
+    <label>Last Name: <input type="text" id="lastName"></label>
+    <label>Submission Date: <input type="date" id="submissionDate"></label>
+    
+    <h2>Expenses</h2>
+    <div id="expensesContainer"></div>
+    <button type="button" id="addExpenseBtn">Add Expense</button>
 
-    <form id="reimbursementForm">
-        <h2>Employee Info</h2>
-        <label>First Name: <input type="text" id="firstName" required></label><br>
-        <label>Last Name: <input type="text" id="lastName" required></label><br>
-        <label>Date: <input type="date" id="submissionDate" required></label><br>
+    <h2>Receipts</h2>
+    <input type="file" id="receiptFiles" accept="image/*" multiple>
 
-        <h2>Expenses</h2>
-        <div id="expensesContainer"></div>
-        <button type="button" id="addExpenseBtn">Add Expense</button><br><br>
+    <br><br>
+    <button type="button" id="generatePdfBtn">Generate PDF</button>
 
-        <h2>Receipts</h2>
-        <label>Upload Receipt Images: 
-            <input type="file" id="receiptFiles" accept="image/*" multiple>
-        </label><br><br>
-
-        <button type="button" id="generatePdfBtn">Generate PDF</button>
-    </form>
-
-    <!-- Libraries -->
+    <!-- jsPDF library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Your script -->
     <script src="script.js"></script>
 </body>
 </html>
-
-    }
-}
